@@ -16,7 +16,6 @@ from kivy.lang import Builder
 from MyLabel import MyLabel
 from ListItemWithCheckbox import ListItemWithCheckbox
 from RightCheckbox import RightCheckbox
-import threading
 
 
 class Myapp(MDApp):
@@ -40,27 +39,59 @@ class Myapp(MDApp):
 
     def update_processes(self):
         try:
-            """clear gui"""
-            if len(self.root.ids.container.children) != 0:
-                RightCheckbox.my_collection = self.root.ids.container.children[:]
-                for i in range(len(RightCheckbox.my_collection)):
-                    self.root.ids.container.remove_widget(RightCheckbox.my_collection[i])
-                RightCheckbox.my_collection.clear()
-            """fill gui"""
             pid_collection = psutil.pids()
             processes = []
-            for i in range(len(pid_collection)):
-                processes.append(psutil.Process(pid_collection[i]))
-            for i in range(len(processes)):
-                start_psutil = processes[i].create_time()
-                cur_text = '{:<40}{:>45}{:>60}'.format(processes[i].name(),
-                                                       str(processes[i].pid),
-                                                       str(time.strftime("%e.%m.%Y --- %H:%M:%S",
-                                                                         time.localtime(start_psutil)
-                                                                         )
+
+            #add lost elements
+            if len(self.root.ids.container.children) != 0:
+                my_collection = self.root.ids.container.children[:]
+                for i in range(len(my_collection)):
+                    split = my_collection[i].text.split()
+                    my_collection[i] = int(split[len(split) - 4])
+                total_pid_collection = set(pid_collection)
+                current_pid_collection = set(my_collection)
+                new_pid_collection = total_pid_collection - current_pid_collection
+                old_pid_collection = current_pid_collection - total_pid_collection
+                print('new_pid_collect = ', new_pid_collection)
+                print('old_pid_collect = ', old_pid_collection)
+                pid_reminder = list(new_pid_collection)
+                pid_to_del = list(old_pid_collection)
+                for i in range(len(pid_reminder)):
+                    processes.append(psutil.Process(pid_reminder[i]))
+                for i in range(len(processes)):
+                    start_psutil = processes[i].create_time()
+                    cur_text = '{:<40}{:>45}{:>60}'.format(processes[i].name(),
+                                                           str(processes[i].pid),
+                                                           str(time.strftime("%e.%m.%Y --- %H:%M:%S",
+                                                                             time.localtime(start_psutil)
+                                                                             )
+                                                               )
                                                            )
-                                                       )
-                self.root.ids.container.add_widget(ListItemWithCheckbox(text=cur_text))
+                    self.root.ids.container.add_widget(ListItemWithCheckbox(text=cur_text))
+
+            #clear gui
+                if len(pid_to_del) != 0:
+                    my_collection = self.root.ids.container.children[:]
+                    for i in range(len(my_collection)):
+                        split = my_collection[i].text.split()
+                        if int(split[len(split) - 4]) in pid_to_del:
+                            self.root.ids.container.remove_widget(my_collection[i])
+
+            #fill gui
+            if len(self.root.ids.container.children) == 0:
+                for i in range(len(pid_collection)):
+                    processes.append(psutil.Process(pid_collection[i]))
+                for i in range(len(processes)):
+                    start_psutil = processes[i].create_time()
+                    cur_text = '{:<40}{:>45}{:>60}'.format(processes[i].name(),
+                                                           str(processes[i].pid),
+                                                           str(time.strftime("%e.%m.%Y --- %H:%M:%S",
+                                                                             time.localtime(start_psutil)
+                                                                             )
+                                                               )
+                                                           )
+                    self.root.ids.container.add_widget(ListItemWithCheckbox(text=cur_text))
+
         except:
             self.update_processes()
 
@@ -99,20 +130,28 @@ class Myapp(MDApp):
             print('Process adding error!')
 
     def remove_process(self):
-        try:
             processes = []
+            print(RightCheckbox.my_collection)
             for i in range(len(RightCheckbox.my_collection)):
-                self.root.ids.container.remove_widget(RightCheckbox.my_collection[i])
-                split = RightCheckbox.my_collection[i].text.split()
-                RightCheckbox.my_collection[i] = split[len(split) - 4]
-                processes.append(psutil.Process(int(RightCheckbox.my_collection[i])))
-                processes[-1].terminate()
-            gone, alive = psutil.wait_procs(processes, timeout=3, callback=self.on_terminate)
+                try:
+                    self.root.ids.container.remove_widget(RightCheckbox.my_collection[i])
+                    split = RightCheckbox.my_collection[i].text.split()
+                    RightCheckbox.my_collection[i] = int(split[len(split) - 4])
+                    processes.append(psutil.Process(RightCheckbox.my_collection[i]))
+                    processes[-1].terminate()
+                except:
+                    pass
+            alive = [1, 2]
+            try:
+                gone, alive = psutil.wait_procs(processes, timeout=3, callback=self.on_terminate)
+            except:
+                print('Недостаточно прав')
             for i in range(len(alive)):
-                alive[i].kill()
+                try:
+                    alive[i].kill()
+                except:
+                    pass
             RightCheckbox.my_collection.clear()
-        except:
-            print('removing was failed')
 
     def on_start(self):
         self.update_processes()
