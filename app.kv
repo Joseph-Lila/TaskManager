@@ -1,0 +1,37 @@
+<ListItemWithCheckbox>:
+
+    IconLeftWidget:
+        icon: root.icon
+
+    RightCheckbox:
+
+MDBoxLayout:
+    orientation: "vertical"
+
+    MDToolbar:
+        title: "CONTROL MENU"
+        md_bg_color: [200/255, 35/255, 100/255, 255/255]
+        elevation: 50
+        right_action_items: [["update", lambda x: app.update_processes()], ["book-plus", lambda x: app.get_file_manager_answer()], ["plus", lambda x: app.add_process()], ["minus", lambda x: app.remove_process()]]
+
+    GridLayout:
+        cols: 3
+        rows: None
+        size_hint_y: .05
+
+        MyLabel:
+            color: 'red'
+            text: 'PROCESS NAME'
+        MyLabel:
+            color: 'red'
+            text: 'PID'
+        MyLabel:
+            color: 'red'
+            text: 'CREATE TIME'
+
+    BoxLayout:
+
+        ScrollView:
+
+            MDList:
+                id: container
