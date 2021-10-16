@@ -32,7 +32,7 @@ class Myapp(MDApp):
     def update_with_timer(self, seconds):
         while True:
             time.sleep(seconds)
-            self.update_processes()
+            self.update_processes_gui()
 
     def build(self):
         return Builder.load_file('app.kv')
@@ -111,7 +111,7 @@ class Myapp(MDApp):
                                                        )
                 self.root.ids.container.add_widget(ListItemWithCheckbox(text=cur_text))
 
-    def update_processes(self):
+    def update_processes_gui(self):
         try:
             """If there are new processes which are not visible"""
             self.append_new_processes_gui()
@@ -120,7 +120,7 @@ class Myapp(MDApp):
             """If gui processes list is empty"""
             self.fill_empty_gui_list()
         except:
-            self.update_processes()
+            self.update_processes_gui()
 
     @staticmethod
     def on_terminate(proc):
@@ -180,7 +180,7 @@ class Myapp(MDApp):
             RightCheckbox.my_collection.clear()
 
     def on_start(self):
-        self.update_processes()
+        self.update_processes_gui()
 
 
 if __name__ == '__main__':
