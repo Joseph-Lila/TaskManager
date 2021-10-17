@@ -7,7 +7,6 @@ Config.set('kivy', 'keyboard_mode', 'systemanddock')
 Config.set('graphics', 'resizable', False)
 Config.set("graphics", "width", 960)
 Config.set("graphics", "height", 1017)
-width_coefficient = .5
 
 from kivymd.uix.filemanager import MDFileManager
 from kivymd.toast import toast
