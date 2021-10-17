@@ -15,6 +15,7 @@ from kivy.lang import Builder
 from MyLabel import MyLabel
 from ListItemWithCheckbox import ListItemWithCheckbox
 from RightCheckbox import RightCheckbox
+from kivy.clock import Clock
 
 
 class Myapp(MDApp):
@@ -27,11 +28,6 @@ class Myapp(MDApp):
             select_path=self.select_path,
         )
         self.file_manager_answer = '?'
-
-    def update_with_timer(self, seconds):
-        while True:
-            time.sleep(seconds)
-            self.update_processes_gui()
 
     def build(self):
         return Builder.load_file('app.kv')
@@ -70,6 +66,7 @@ class Myapp(MDApp):
     """This function adds new list items to gui list"""
     def append_new_processes_gui(self):
         pid_reminder = self.get_pid_collection_to_add()
+        print('New pid collection: ', pid_reminder)
         if pid_reminder is not None:
             processes = [psutil.Process(pid) for pid in pid_reminder]
             for proc in processes:
@@ -86,6 +83,7 @@ class Myapp(MDApp):
     """This function clears not existing list items from gui list"""
     def remove_not_existing_processes_gui(self):
         not_existing_pid_collection = self.get_pid_collection_to_del()
+        print('Not existing pid collection: ', not_existing_pid_collection)
         if not_existing_pid_collection is not None:
             my_collection = self.root.ids.container.children[:]
             for item in my_collection:
@@ -156,7 +154,6 @@ class Myapp(MDApp):
             print('Process adding error!')
 
     def remove_process(self):
-        processes_to_terminate = []
         processes_to_remove_gui = [item for item in RightCheckbox.my_collection]
         for item in processes_to_remove_gui:
             self.root.ids.container.remove_widget(item)
@@ -173,7 +170,7 @@ class Myapp(MDApp):
         try:
             gone, alive = psutil.wait_procs(processes_to_terminate, timeout=3, callback=self.on_terminate)
         except:
-            print('Недостаточно прав')
+            pass
         for proc in alive:
             try:
                 proc.kill()
@@ -181,8 +178,13 @@ class Myapp(MDApp):
                 pass
         RightCheckbox.my_collection.clear()
 
+    """Each dt seconds the gui list will be updated."""
+    def callback(self, dt):
+        self.update_processes_gui()
+
     def on_start(self):
         self.update_processes_gui()
+        Clock.schedule_interval(self.callback, 10)
 
 
 if __name__ == '__main__':
