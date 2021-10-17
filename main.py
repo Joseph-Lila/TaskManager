@@ -157,27 +157,30 @@ class Myapp(MDApp):
             print('Process adding error!')
 
     def remove_process(self):
-            processes = []
-            for i in range(len(RightCheckbox.my_collection)):
-                try:
-                    self.root.ids.container.remove_widget(RightCheckbox.my_collection[i])
-                    split = RightCheckbox.my_collection[i].text.split()
-                    RightCheckbox.my_collection[i] = int(split[len(split) - 4])
-                    processes.append(psutil.Process(RightCheckbox.my_collection[i]))
-                    processes[-1].terminate()
-                except:
-                    pass
-            alive = [1, 2]
+        processes_to_terminate = []
+        processes_to_remove_gui = [item for item in RightCheckbox.my_collection]
+        for item in processes_to_remove_gui:
+            self.root.ids.container.remove_widget(item)
+        processes_to_terminate = [
+                psutil.Process(int(item.text.split()[len(item.text.split()) - 4]))
+                for item in RightCheckbox.my_collection
+            ]
+        try:
+            for process in processes_to_terminate:
+                process.terminate()
+        except:
+            pass
+        alive = [1, 2]
+        try:
+            gone, alive = psutil.wait_procs(processes_to_terminate, timeout=3, callback=self.on_terminate)
+        except:
+            print('Недостаточно прав')
+        for proc in alive:
             try:
-                gone, alive = psutil.wait_procs(processes, timeout=3, callback=self.on_terminate)
+                proc.kill()
             except:
-                print('Недостаточно прав')
-            for i in range(len(alive)):
-                try:
-                    alive[i].kill()
-                except:
-                    pass
-            RightCheckbox.my_collection.clear()
+                pass
+        RightCheckbox.my_collection.clear()
 
     def on_start(self):
         self.update_processes_gui()
