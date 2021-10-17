@@ -32,68 +32,95 @@ class Myapp(MDApp):
     def update_with_timer(self, seconds):
         while True:
             time.sleep(seconds)
-            self.update_processes()
+            self.update_processes_gui()
 
     def build(self):
         return Builder.load_file('app.kv')
 
-    def update_processes(self):
-        try:
+    """Function for sorting processes by name"""
+    @staticmethod
+    def sort_key(item):
+        return str.lower(item.name())
+
+    """It returns not existing processes pids collection or None."""
+    def get_pid_collection_to_del(self):
+        if len(self.root.ids.container.children) != 0:
             pid_collection = psutil.pids()
-            processes = []
+            my_collection = [int(item.text.split()[len(item.text.split()) - 4]) for item in
+                             self.root.ids.container.children[:]]
+            total_pid_collection = set(pid_collection)
+            current_pid_collection = set(my_collection)
+            old_pid_collection = current_pid_collection - total_pid_collection
+            return list(old_pid_collection)
+        else:
+            return None
 
-            #add lost elements
-            if len(self.root.ids.container.children) != 0:
-                my_collection = self.root.ids.container.children[:]
-                for i in range(len(my_collection)):
-                    split = my_collection[i].text.split()
-                    my_collection[i] = int(split[len(split) - 4])
-                total_pid_collection = set(pid_collection)
-                current_pid_collection = set(my_collection)
-                new_pid_collection = total_pid_collection - current_pid_collection
-                old_pid_collection = current_pid_collection - total_pid_collection
-                print('new_pid_collect = ', new_pid_collection)
-                print('old_pid_collect = ', old_pid_collection)
-                pid_reminder = list(new_pid_collection)
-                pid_to_del = list(old_pid_collection)
-                for i in range(len(pid_reminder)):
-                    processes.append(psutil.Process(pid_reminder[i]))
-                for i in range(len(processes)):
-                    start_psutil = processes[i].create_time()
-                    cur_text = '{:<40}{:>45}{:>60}'.format(processes[i].name(),
-                                                           str(processes[i].pid),
-                                                           str(time.strftime("%e.%m.%Y --- %H:%M:%S",
-                                                                             time.localtime(start_psutil)
-                                                                             )
-                                                               )
+    """It returns not visible processes pids collection or None."""
+    def get_pid_collection_to_add(self):
+        if len(self.root.ids.container.children) != 0:
+            pid_collection = psutil.pids()
+            my_collection = [int(item.text.split()[len(item.text.split()) - 4]) for item in
+                             self.root.ids.container.children[:]]
+            total_pid_collection = set(pid_collection)
+            current_pid_collection = set(my_collection)
+            new_pid_collection = total_pid_collection - current_pid_collection
+            return list(new_pid_collection)
+        else:
+            return None
+
+    """This function adds new list items to gui list"""
+    def append_new_processes_gui(self):
+        pid_reminder = self.get_pid_collection_to_add()
+        if pid_reminder is not None:
+            processes = [psutil.Process(pid) for pid in pid_reminder]
+            for proc in processes:
+                start_psutil = proc.create_time()
+                cur_text = '{:<40}{:>45}{:>60}'.format(proc.name(),
+                                                       str(proc.pid),
+                                                       str(time.strftime("%e.%m.%Y --- %H:%M:%S",
+                                                                         time.localtime(start_psutil)
+                                                                         )
                                                            )
-                    self.root.ids.container.add_widget(ListItemWithCheckbox(text=cur_text))
+                                                       )
+                self.root.ids.container.add_widget(ListItemWithCheckbox(text=cur_text))
 
-            #clear gui
-                if len(pid_to_del) != 0:
-                    my_collection = self.root.ids.container.children[:]
-                    for i in range(len(my_collection)):
-                        split = my_collection[i].text.split()
-                        if int(split[len(split) - 4]) in pid_to_del:
-                            self.root.ids.container.remove_widget(my_collection[i])
+    """This function clears not existing list items from gui list"""
+    def remove_not_existing_processes_gui(self):
+        not_existing_pid_collection = self.get_pid_collection_to_del()
+        if not_existing_pid_collection is not None:
+            my_collection = self.root.ids.container.children[:]
+            for item in my_collection:
+                split = item.text.split()
+                if int(split[len(split) - 4]) in not_existing_pid_collection:
+                    self.root.ids.container.remove_widget(item)
 
-            #fill gui
-            if len(self.root.ids.container.children) == 0:
-                for i in range(len(pid_collection)):
-                    processes.append(psutil.Process(pid_collection[i]))
-                for i in range(len(processes)):
-                    start_psutil = processes[i].create_time()
-                    cur_text = '{:<40}{:>45}{:>60}'.format(processes[i].name(),
-                                                           str(processes[i].pid),
-                                                           str(time.strftime("%e.%m.%Y --- %H:%M:%S",
-                                                                             time.localtime(start_psutil)
-                                                                             )
-                                                               )
+    """This function adds list items to gui processes list"""
+    def fill_empty_gui_list(self):
+        if len(self.root.ids.container.children) == 0:
+            pid_collection = psutil.pids()
+            processes = [psutil.Process(pid) for pid in pid_collection]
+            processes.sort(key=self.sort_key)
+            for proc in processes:
+                start_psutil = proc.create_time()
+                cur_text = '{:<40}{:>45}{:>60}'.format(proc.name(),
+                                                       str(proc.pid),
+                                                       str(time.strftime("%e.%m.%Y --- %H:%M:%S",
+                                                                         time.localtime(start_psutil)
+                                                                         )
                                                            )
-                    self.root.ids.container.add_widget(ListItemWithCheckbox(text=cur_text))
+                                                       )
+                self.root.ids.container.add_widget(ListItemWithCheckbox(text=cur_text))
 
+    def update_processes_gui(self):
+        try:
+            """If there are new processes which are not visible"""
+            self.append_new_processes_gui()
+            """If some processes have stoped but are still visible"""
+            self.remove_not_existing_processes_gui()
+            """If gui processes list is empty"""
+            self.fill_empty_gui_list()
         except:
-            self.update_processes()
+            self.update_processes_gui()
 
     @staticmethod
     def on_terminate(proc):
@@ -120,7 +147,7 @@ class Myapp(MDApp):
         self.file_manager.close()
 
     def get_file_manager_answer(self):
-        path = f'D:\\System_programming\\lab2'
+        path = f'D:\\System_programming\\TaskManager'
         self.file_manager.show(path)
 
     def add_process(self):
@@ -130,31 +157,33 @@ class Myapp(MDApp):
             print('Process adding error!')
 
     def remove_process(self):
-            processes = []
-            print(RightCheckbox.my_collection)
-            for i in range(len(RightCheckbox.my_collection)):
-                try:
-                    self.root.ids.container.remove_widget(RightCheckbox.my_collection[i])
-                    split = RightCheckbox.my_collection[i].text.split()
-                    RightCheckbox.my_collection[i] = int(split[len(split) - 4])
-                    processes.append(psutil.Process(RightCheckbox.my_collection[i]))
-                    processes[-1].terminate()
-                except:
-                    pass
-            alive = [1, 2]
+        processes_to_terminate = []
+        processes_to_remove_gui = [item for item in RightCheckbox.my_collection]
+        for item in processes_to_remove_gui:
+            self.root.ids.container.remove_widget(item)
+        processes_to_terminate = [
+                psutil.Process(int(item.text.split()[len(item.text.split()) - 4]))
+                for item in RightCheckbox.my_collection
+            ]
+        try:
+            for process in processes_to_terminate:
+                process.terminate()
+        except:
+            pass
+        alive = [1, 2]
+        try:
+            gone, alive = psutil.wait_procs(processes_to_terminate, timeout=3, callback=self.on_terminate)
+        except:
+            print('Недостаточно прав')
+        for proc in alive:
             try:
-                gone, alive = psutil.wait_procs(processes, timeout=3, callback=self.on_terminate)
+                proc.kill()
             except:
-                print('Недостаточно прав')
-            for i in range(len(alive)):
-                try:
-                    alive[i].kill()
-                except:
-                    pass
-            RightCheckbox.my_collection.clear()
+                pass
+        RightCheckbox.my_collection.clear()
 
     def on_start(self):
-        self.update_processes()
+        self.update_processes_gui()
 
 
 if __name__ == '__main__':
